@@ -2,9 +2,8 @@
 
 namespace PtmScreeCaptureServer.Model
 {
-    public class WorkTask : IMongoDocument
+    public class WorkTask : BaseDocument
     {
-        public ObjectId Id { get; set; }
         public string Name { get; set; } = "";
     }
 }

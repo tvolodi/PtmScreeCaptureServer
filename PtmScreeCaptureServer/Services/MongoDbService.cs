@@ -9,30 +9,33 @@ namespace PtmScreeCaptureServer.Services
     {
         //private readonly IMongoCollection<TDocument> mongoCollection;
 
-        private MongoDatabaseBase _database;
+        private IMongoDatabase _database;
 
         public MongoDbService(IOptions<DatabaseSettings> options)
         {
             var mongoClient = new MongoClient(options.Value.ConnectionString);
 
-            var _database = mongoClient.GetDatabase(options.Value.DatabaseName);
+            _database = mongoClient.GetDatabase(options.Value.DatabaseName);
 
         }
 
-        public async Task<List<T>> GetAsync<T>()
+        public async Task<List<T>> GetAsync<T>() where T : IMongoDocument
         {
             IMongoCollection<T> collection = _database.GetCollection<T>(typeof(T).Name);
 
-            var result = await collection.Find(_ => true).ToListAsync<T>();
-
+            var result = await collection.Find(d => d.IsDeleted == false).ToListAsync<T>();
+            if(result == null)
+            {
+                result = new List<T>(); 
+            }
             return result;            
         }
 
-        public async Task<T> GetAsync<T>(ObjectId id) where T : IMongoDocument
+        public async Task<T> GetAsync<T>(string id) where T : IMongoDocument
         {
             IMongoCollection<T> collection = _database.GetCollection<T>(typeof(T).Name);
 
-            var result = await collection.Find(d => d.Id == id).FirstOrDefaultAsync<T>();
+            var result = await collection.Find(d => d.Id == id && d.IsDeleted == false).FirstOrDefaultAsync<T>();
 
             return result;
         }
@@ -44,18 +47,24 @@ namespace PtmScreeCaptureServer.Services
             await collection.InsertOneAsync(doc);
         }
 
-        public async System.Threading.Tasks.Task UpdateAsync<T>(ObjectId id, T doc) where T : IMongoDocument
+        public async System.Threading.Tasks.Task UpdateAsync<T>(string id, T doc) where T : IMongoDocument
         {
             IMongoCollection<T> collection = _database.GetCollection<T>(typeof(T).Name);
 
             var result = await collection.ReplaceOneAsync(d => d.Id == id, doc);
         }
 
-        public async System.Threading.Tasks.Task DeleteAsync<T>(ObjectId id) where T : IMongoDocument
+        public async System.Threading.Tasks.Task DeleteAsync<T>(string id) where T : IMongoDocument
         {
             IMongoCollection<T> collection = _database.GetCollection<T>(typeof(T).Name);
 
-            await collection.DeleteOneAsync(d => d.Id == id);
+            var doc = await collection.Find(d => d.Id == id && d.IsDeleted == false).FirstOrDefaultAsync();
+            if(doc != null)
+            {
+                doc.IsDeleted = true;
+                await collection.ReplaceOneAsync(d => d.Id == id, doc);
+            }
+            
         }
 
 
