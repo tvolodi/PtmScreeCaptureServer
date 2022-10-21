@@ -36,7 +36,7 @@ namespace PtmScreeCaptureServer.Controllers
         public async Task<IActionResult> Post(T doc) // where T : IMongoDocument
         {
             await _mongoDbService.InsertAsync<T>(doc);
-            return CreatedAtAction(nameof(Get), new { id = doc.Id }, doc);
+            return CreatedAtAction(nameof(Post), new { id = doc.Id }, doc);
         }
 
         [HttpPut]
